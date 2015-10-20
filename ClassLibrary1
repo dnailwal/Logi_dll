@@ -1,0 +1,217 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+//using System.Linq;
+using System.Text;
+using System.IO;
+//using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
+//using System.Web;
+using System.Net;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using rdPlugin;
+
+namespace ClassLibrary1
+{
+    public class Class1
+    {
+        public void addHeaders(ref rdPlugin.rdServerObjects rdObjects)
+        {
+            String par_str = null;
+            XmlDocument xmlSettings;
+            XmlElement eleConn;
+            Hashtable plugin_params = rdObjects.PluginParameters;
+            //string currentTime;
+            foreach (DictionaryEntry entry in plugin_params)
+            {
+                logtext(entry.Key.ToString());
+                logtext(entry.Value.ToString());
+                par_str += entry.Key + " "+entry.Value+" ";
+            }
+            // Load the current report definition into an XmlDocument object
+            xmlSettings = new XmlDocument();
+            xmlSettings.LoadXml(rdObjects.CurrentDefinition);
+
+            // Locate the Connection element
+            eleConn = (XmlElement)xmlSettings.SelectSingleNode("//Setting/Connections/Connection[@Type='HTTP']");
+            //For Multiple Node changes 
+            /*
+            eleConnList = (XmlElement)xmlSettings.SelectSingleNode("//Setting/Connections/Connection[@Type='HTTP']");
+            foreach (XmlNode xn in eleConnList)
+            {
+                //Add Headers
+            }
+            */
+
+            // Create Headers
+            /*XmlElement rHeader1 = xmlSettings.CreateElement("RequestHeader");
+            rHeader1.SetAttribute("RequestHeaderValue","merudashboards@glassbeam.com");
+            rHeader1.SetAttribute("RequestHeaderName","username");
+
+            XmlElement rHeader2 = xmlSettings.CreateElement("RequestHeader");
+            rHeader2.SetAttribute("RequestHeaderValue","meru");
+            rHeader2.SetAttribute("RequestHeaderName","cust_name");
+
+            XmlElement rHeader3 = xmlSettings.CreateElement("RequestHeader");
+            rHeader3.SetAttribute("RequestHeaderValue","1");
+            rHeader3.SetAttribute("RequestHeaderName","dashboard");
+            */
+            try
+            {
+                foreach (DictionaryEntry entry in plugin_params)
+                {
+                    logtext("Entered Foreach");
+                    logtext(entry.Key.ToString());
+                    logtext(entry.Value.ToString());
+                    XmlElement rHeader1 = xmlSettings.CreateElement("RequestHeader");
+                    logtext("1");
+                    rHeader1.SetAttribute("RequestHeaderValue", entry.Value.ToString());
+                    //rHeader1.Attributes["RequestHeaderValue"].Value = "entry.Value.ToString()";
+                    logtext("2");
+                    rHeader1.SetAttribute("RequestHeaderName", entry.Key.ToString());
+                    //rHeader1.Attributes["RequestHeaderName"].Value = "entry.Key.ToString()";
+                    logtext("3");
+                    logtext(rHeader1.Attributes["RequestHeaderValue"].Value);
+                    logtext("4");
+                    logtext(rHeader1.Attributes["RequestHeaderName"].Value);
+                    logtext("5");
+                    eleConn.AppendChild(rHeader1);
+                    logtext("6");
+                }
+            }
+            catch (Exception exp)
+            {
+                logtext(exp.Message);
+            }               
+
+            //Add the headers to the Connection.
+            /*eleConn.AppendChild(rHeader1);
+            eleConn.AppendChild(rHeader2);
+            eleConn.AppendChild(rHeader3);*/
+            //currentTime = DateTime.Now.ToShortTimeString();
+            //eleApp.SetAttribute("Caption", "Hello from the Sample Plugin! Time: " + currentTime);
+
+            // Save the new report definition
+            rdObjects.CurrentDefinition = xmlSettings.OuterXml;
+            xmlSettings.Save("F:\\Logi Apps\\TestPlugin\\logs\\data.xml");
+            //System.IO.File.WriteAllText(@"F:\\Logi Apps\\TestPlugin\\logs\\params.txt",par_str);
+        }
+        public void logtext(string str)
+        {
+            using (System.IO.StreamWriter file =
+            new System.IO.StreamWriter(@"F:\\Logi Apps\\TestPlugin\\logs\\log.txt", true))
+            {
+                file.WriteLine(str);
+            }
+        }
+        public void addTkey(ref rdPlugin.rdServerObjects rdObjects)
+        {
+            // Assign the parameters values to strings
+            Hashtable plugin_params = rdObjects.PluginParameters;
+            String url = plugin_params["url"].ToString();
+            String username = plugin_params["username"].ToString();
+            String password = plugin_params["password"].ToString();
+
+            // Create the POST request
+            String postData = "email=" + username + "&password=" + password;
+            byte[] byteArray = Encoding.UTF8.GetBytes(postData);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = byteArray.Length;
+
+            // Get the request stream.
+            Stream dataStream = request.GetRequestStream();
+
+            // Write the data to the request stream.
+            dataStream.Write(byteArray, 0, byteArray.Length);
+
+            // Close the Stream object.
+            dataStream.Close();
+            request.Timeout = 5000;
+
+            // Get the response
+            String jsonOutput;
+            using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
+            {
+                StreamReader reader = new StreamReader(response.GetResponseStream());
+                jsonOutput = reader.ReadToEnd();
+                Console.WriteLine("THIS IS JSON OUTPUT: " + jsonOutput);
+            }
+
+            // Get the session key from the Json Output
+            IDictionary<String, object> data = JsonConvert.DeserializeObject<Dictionary<String, object>>(jsonOutput);
+            String keyString = data["Data"].ToString();
+            String hName = "Cookie";
+            String hValue = keyString;
+
+            // Load the existing _Settings XML file
+            XmlDocument xmlSettings;
+            XmlElement eleConn;
+            xmlSettings = new XmlDocument();
+            xmlSettings.LoadXml(rdObjects.CurrentDefinition);
+
+            // Locate the Connection element
+            eleConn = (XmlElement)xmlSettings.SelectSingleNode("//Setting/Connections/Connection[@Type='HTTP']");
+
+            // Add seesion key in the headers
+            XmlElement rHeader1 = xmlSettings.CreateElement("RequestHeader");
+            rHeader1.SetAttribute("RequestHeaderName", hName);
+            rHeader1.SetAttribute("RequestHeaderValue", hValue);
+            eleConn.AppendChild(rHeader1);
+            
+            // Save the new report definition
+            rdObjects.CurrentDefinition = xmlSettings.OuterXml;
+            xmlSettings.Save("F:\\Logi Apps\\TestPlugin\\logs\\data.xml");
+        }
+        public void CreateReport(ref rdPlugin.rdServerObjects rdObjects)
+        {
+            /*XmlDocument doc = new XmlDocument();
+
+            //(1) the xml declaration is recommended, but not mandatory
+            XmlDeclaration xmlDeclaration = doc.CreateXmlDeclaration("1.0", "UTF-8", null);
+            XmlElement root = doc.DocumentElement;
+            doc.InsertBefore(xmlDeclaration, root);
+            logtext("Created Root node");
+            //doc.Save("F:\\Logi Apps\\TestPlugin\\logs\\root.xml");
+
+            //(2) string.Empty makes cleaner code
+            XmlElement element1 = doc.CreateElement(string.Empty, "Report", string.Empty);
+            doc.AppendChild(element1);
+            logtext("Created Element1");
+            doc.Save("F:\\Logi Apps\\TestPlugin\\logs\\ele1.xml");
+
+            XmlElement element2 = doc.CreateElement(string.Empty, "Body", string.Empty);
+            doc.AppendChild(element2);
+            logtext("Created Element2");
+            doc.Save("F:\\Logi Apps\\TestPlugin\\logs\\ele2.xml");
+            
+            XmlElement element3 = doc.CreateElement(string.Empty, "Division", string.Empty);
+            element3.SetAttribute("ID", "divMain");
+            doc.AppendChild(element3);
+            logtext("Created Element3");
+            doc.Save("F:\\Logi Apps\\TestPlugin\\logs\\ele3.xml");
+
+            XmlElement element4 = doc.CreateElement(string.Empty, "Button", string.Empty);
+            element4.SetAttribute("ID", "btn1");
+            element4.SetAttribute("Caption", "Document Created");
+            doc.AppendChild(element4);
+            logtext("Created Element4");
+            doc.Save("F:\\Logi Apps\\TestPlugin\\logs\\ele4.xml");
+
+            doc.Save("F:\\Logi Apps\\TestPlugin\\_Definitions\\_Reports\\newfile.lgx");
+            logtext("XML Created");*/
+
+            // Assign the parameters values to strings
+            Hashtable plugin_params = rdObjects.PluginParameters;
+            String btnText = plugin_params["bText"].ToString();
+            XDocument doc = new XDocument(new XElement("Report",
+                                           new XElement("Body",
+                                               new XElement("Division", new XAttribute("ID", "divMain")),
+                                               new XElement("Button", new XAttribute("ID", "btn1"), new XAttribute("Caption", btnText)))));
+            doc.Save("F:\\Logi Apps\\TestPlugin\\_Definitions\\_Reports\\newfile.lgx");
+        }
+    }
+}
