@@ -1,0 +1,364 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using System.Net;
+using System.IO;
+using System.Xml;
+using System.Xml.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using rdPlugin;
+
+namespace auth
+{
+    class tkauth
+    {
+        static void Main(string[] args)
+        {
+            //http_req_res();
+            //json_to_xml();
+            CreateReport();
+            //add_tkey();
+            //String jsonString = "{\"Status\":\"Success\",\"Msg\":\"Values for requested column\",\"Data\":[]}";
+            //JsonToXml(jsonString);
+
+        }
+        public static void json_to_xml()
+        {
+            Console.WriteLine("Function Started at " + DateTime.Now);
+            string url = "http://10.163.36.122:9000/v1/analytics/system/all/list/hiwi/hiwi/pod";
+            string fileName = @"C:\Users\deepak.nailwal\Documents\Visual Studio 2012\Projects\ConsoleApplication1\ConsoleApplication1\output2.xml";
+            Console.WriteLine("Request Started at " + DateTime.Now);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.Method = "GET";
+            request.Headers.Add("username", "hiwidashboard@glassbeam.com");
+            request.Headers.Add("cust_name", "hiwi");
+            request.Headers.Add("dashboard", "1");
+            request.Timeout = 5000;
+            /*string url = "https://gbpis7.glassbeam.com/v1/base/columns/alert/named/aruba/aruba/podv3/aruba/BB0001431?col=sysid&col=obs_ts&col=label&col=category_id&col=buuid&filter=buuid=%22BB0001431___1441264769000%22";
+            string fileName = @"C:\Users\deepak.nailwal\Documents\Visual Studio 2012\Projects\ConsoleApplication1\ConsoleApplication1\output2.txt";
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.Method = "GET";
+            request.Headers.Add("username", "arubadashboards@glassbeam.com");
+            request.Headers.Add("cust_name", "aruba");
+            request.Headers.Add("dashboard", "1");
+            request.Timeout = 5000;*/
+            String jsonOutput;
+            Console.WriteLine("Response Started at " +DateTime.Now);
+            using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
+            {
+                StreamReader reader = new StreamReader(response.GetResponseStream());
+                jsonOutput = reader.ReadToEnd();
+                Console.WriteLine("THIS IS JSON OUTPUT: " + jsonOutput);
+            }
+            Console.WriteLine("Response Completed at " + DateTime.Now);
+            //IDictionary<String, object> data = JsonConvert.DeserializeObject<Dictionary<String, object>>(jsonOutput);
+            //JObject objParserd = JObject.Parse(jsonOutput);
+            Console.WriteLine("XML Conversion Started at " + DateTime.Now);
+            XmlDocument doc = (XmlDocument)JsonConvert.DeserializeXmlNode(jsonOutput,"rootdata");
+            Console.WriteLine("XML Conversion Ended at " + DateTime.Now);
+            //Console.WriteLine(doc);
+            //Console.WriteLine("data is "+data["Data"]);
+            doc.Save(fileName);
+            Console.ReadLine();
+            /*using (var file = File.OpenWrite("C:\\Users\\deepak.nailwal\\Documents\\Visual Studio 2012\\Projects\\ConsoleApplication1\\ConsoleApplication1\\output3.xml"))
+                foreach (var entry in data)
+                    file.WriteLine("[{0} {1}]", entry.Key, entry.Value); */
+        }
+        public static void http_req_res()
+        {
+            string url = "http://10.172.93.113:9000/v1/base/columns/events/named/meru/meru/meru_pod/meru/787BA9964A91/sta_log/2013-10-27T14:46:31/2013-10-31T14:46:31?col=evt_text&col=evt_epoch&col=bundle_id&filter=bundle_id=%22meru.gather.YYC_WC1.2013_10_29.10_46_31.tar.gz___10682163___787BA9964A91___1383057991000%22%20AND%20evt_text~%22state%20change%20%3Cold=Associated%3E%3Cnew=Associated%3E%22";
+            string fileName = @"C:\Users\deepak.nailwal\Documents\Visual Studio 2012\Projects\ConsoleApplication1\ConsoleApplication1\output.file";
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.Method = "GET";
+            request.Headers.Add("username", "merudashboards@glassbeam.com");
+            request.Headers.Add("cust_name", "meru");
+            request.Headers.Add("dashboard", "1");
+            request.Timeout = 5000;
+
+            try
+            {
+                using (WebResponse response = (HttpWebResponse)request.GetResponse())
+                {
+                    /*using (FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
+                    {
+                        byte[] bytes = ReadFully(response.GetResponseStream());
+
+                        stream.Write(bytes, 0, bytes.Length);
+                    }
+                    Console.WriteLine(response.GetResponseStream());
+                    Console.ReadLine();*/
+                    // Obtain a 'Stream' object associated with the response object.
+                    Stream ReceiveStream = response.GetResponseStream();
+                    Encoding encode = System.Text.Encoding.GetEncoding("utf-8");
+                    // Pipe the stream to a higher level stream reader with the required encoding format. 
+                    StreamReader readStream = new StreamReader(ReceiveStream, encode);
+                    Console.WriteLine("\nResponse stream received");
+                    Char[] read = new Char[256];
+                    // Read 256 charcters at a time.     
+                    int count = readStream.Read(read, 0, 256);
+                    while (count > 0)
+                    {
+                        // Dump the 256 characters on a string and display the string onto the console.
+                        String str = new String(read, 0, count);
+                        Console.Write(str);
+                        count = readStream.Read(read, 0, 256);
+                    }
+                    Console.WriteLine("");
+                    Console.ReadLine();
+                    // Release the resources of stream object.
+                    readStream.Close();
+                    // Release the resources of response object.
+                    response.Close(); 
+                }
+            }
+            catch (WebException we)
+            {
+                Console.WriteLine("Error Occured");
+                Console.WriteLine(we.Message);
+                Console.ReadLine();
+            }
+        }
+
+        /*public static byte[] ReadFully(Stream input)
+        {
+            byte[] buffer = new byte[16 * 1024];
+            using (MemoryStream ms = new MemoryStream())
+            {
+                int read;
+                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    ms.Write(buffer, 0, read);
+                }
+                return ms.ToArray();
+            }
+        }*/
+        public static void JsonToXml(string json)
+        {
+            string fileName = @"C:\Users\deepak.nailwal\Documents\Visual Studio 2012\Projects\ConsoleApplication1\ConsoleApplication1\output3.xml";
+            XmlNode newNode = null;
+            XmlNode appendToNode = null;
+            XmlDocument returnXmlDoc = new XmlDocument();
+            returnXmlDoc.LoadXml("<Document />");
+            XmlNode rootNode = returnXmlDoc.SelectSingleNode("Document");
+            appendToNode = rootNode;
+
+            string[] arrElementData;
+            string[] arrElements = json.Split('\r');
+            foreach (string element in arrElements)
+            {
+                string processElement = element.Replace("\r", "").Replace("\n", "").Replace("\t", "").Trim();
+                if ((processElement.IndexOf("}") > -1 || processElement.IndexOf("]") > -1) &&
+                    appendToNode != rootNode)
+                {
+                    appendToNode = appendToNode.ParentNode;
+                }
+                else if (processElement.IndexOf("[") > -1)
+                {
+                    processElement = processElement.Replace(":", "").Replace("[", "").Replace("\"", "").Trim();
+                    newNode = returnXmlDoc.CreateElement(processElement);
+                    appendToNode.AppendChild(newNode);
+                    appendToNode = newNode;
+                }
+                else if (processElement.IndexOf("{") > -1 && processElement.IndexOf(":") > -1)
+                {
+                    processElement = processElement.Replace(":", "").Replace("{", "").Replace("\"", "").Trim();
+                    newNode = returnXmlDoc.CreateElement(processElement);
+                    appendToNode.AppendChild(newNode);
+                    appendToNode = newNode;
+                }
+                else
+                {
+                    if (processElement.IndexOf(":") > -1)
+                    {
+                        arrElementData = processElement.Replace(": \"", ":").Replace("\",", "").Replace("\"", "").Split(':');
+                        newNode = returnXmlDoc.CreateElement(arrElementData[0]);
+                        for (int i = 1; i < arrElementData.Length; i++)
+                        { newNode.InnerText += arrElementData[i]; }
+                        appendToNode.AppendChild(newNode);
+                    }
+                }
+            }
+            returnXmlDoc.Save(fileName);
+            //return returnXmlDoc;
+
+        }
+        //public void add_tkey(ref rdPlugin.rdServerObjects rdObjects)
+        public static void add_tkey()
+        {
+            //String par_str = null;
+            string url = "https://gbdis4.glassbeam.com/v1/aa/app_login";
+            string postData = "email=admin@glassbeam.com&password=gla55beam";
+            byte[] byteArray = Encoding.UTF8.GetBytes(postData);
+            //string fileName = @"C:\Users\deepak.nailwal\Documents\Visual Studio 2012\Projects\ConsoleApplication1\ConsoleApplication1\output.file";
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = byteArray.Length;
+
+            // Get the request stream.
+            Stream dataStream = request.GetRequestStream();
+
+            // Write the data to the request stream.
+            dataStream.Write(byteArray, 0, byteArray.Length);
+
+            // Close the Stream object.
+            dataStream.Close();
+            //request.Headers.Add("email", "admin@glassbeam.com");
+            //request.Headers.Add("password", "gla55beam");
+            request.Timeout = 5000;
+            String jsonOutput;
+            using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
+            {
+                StreamReader reader = new StreamReader(response.GetResponseStream());
+                jsonOutput = reader.ReadToEnd();
+                Console.WriteLine("THIS IS JSON OUTPUT: " + jsonOutput);
+            }
+            IDictionary<String, object> data = JsonConvert.DeserializeObject<Dictionary<String, object>>(jsonOutput);
+            Console.WriteLine("THIS IS Key: " + data["Data"]);
+            String keyString = data["Data"].ToString();
+            String hName = keyString.Substring(0, keyString.IndexOf("="));
+            String hValue = keyString.Substring(keyString.IndexOf("=") + 2);
+            hValue = hValue.Substring(0,hValue.Length - 1);
+            Console.WriteLine("Name" +hName);
+            Console.WriteLine("Value" + hValue);
+            Console.ReadLine();
+            //--XmlDocument xmlSettings;
+            //--XmlElement eleConn;
+            //Hashtable plugin_params = rdObjects.PluginParameters;
+            //string currentTime;
+            /*foreach (DictionaryEntry entry in plugin_params)
+            {
+                logtext(entry.Key.ToString());
+                logtext(entry.Value.ToString());
+                par_str += entry.Key + " " + entry.Value + " ";
+            }*/
+            // Load the current report definition into an XmlDocument object
+            //--xmlSettings = new XmlDocument();
+            //--xmlSettings.LoadXml(rdObjects.CurrentDefinition);
+
+            // Locate the Connection element
+            //--eleConn = (XmlElement)xmlSettings.SelectSingleNode("//Setting/Connections/Connection[@Type='HTTP']");
+            //For Multiple Node changes 
+            /*
+            eleConnList = (XmlElement)xmlSettings.SelectSingleNode("//Setting/Connections/Connection[@Type='HTTP']");
+            foreach (XmlNode xn in eleConnList)
+            {
+                //Add Headers
+            }
+            */
+
+            // Create Headers
+            /*XmlElement rHeader1 = xmlSettings.CreateElement("RequestHeader");
+            rHeader1.SetAttribute("RequestHeaderValue","merudashboards@glassbeam.com");
+            rHeader1.SetAttribute("RequestHeaderName","username");
+
+            XmlElement rHeader2 = xmlSettings.CreateElement("RequestHeader");
+            rHeader2.SetAttribute("RequestHeaderValue","meru");
+            rHeader2.SetAttribute("RequestHeaderName","cust_name");
+
+            XmlElement rHeader3 = xmlSettings.CreateElement("RequestHeader");
+            rHeader3.SetAttribute("RequestHeaderValue","1");
+            rHeader3.SetAttribute("RequestHeaderName","dashboard");
+            */
+            /*try
+            {
+                foreach (DictionaryEntry entry in plugin_params)
+                {
+                    logtext("Entered Foreach");
+                    logtext(entry.Key.ToString());
+                    logtext(entry.Value.ToString());
+                    XmlElement rHeader1 = xmlSettings.CreateElement("RequestHeader");
+                    logtext("1");
+                    rHeader1.SetAttribute("RequestHeaderValue", entry.Value.ToString());
+                    //rHeader1.Attributes["RequestHeaderValue"].Value = "entry.Value.ToString()";
+                    logtext("2");
+                    rHeader1.SetAttribute("RequestHeaderName", entry.Key.ToString());
+                    //rHeader1.Attributes["RequestHeaderName"].Value = "entry.Key.ToString()";
+                    logtext("3");
+                    logtext(rHeader1.Attributes["RequestHeaderValue"].Value);
+                    logtext("4");
+                    logtext(rHeader1.Attributes["RequestHeaderName"].Value);
+                    logtext("5");
+                    eleConn.AppendChild(rHeader1);
+                    logtext("6");
+                }
+            }
+            catch (Exception exp)
+            {
+                logtext(exp.Message);
+            }
+            */
+            //Add the headers to the Connection.
+            /*eleConn.AppendChild(rHeader1);
+            eleConn.AppendChild(rHeader2);
+            eleConn.AppendChild(rHeader3);*/
+            //currentTime = DateTime.Now.ToShortTimeString();
+            //eleApp.SetAttribute("Caption", "Hello from the Sample Plugin! Time: " + currentTime);
+
+            // Save the new report definition
+            //--rdObjects.CurrentDefinition = xmlSettings.OuterXml;
+            //xmlSettings.Save("F:\\Logi Apps\\TestPlugin\\logs\\data.xml");
+            //System.IO.File.WriteAllText(@"F:\\Logi Apps\\TestPlugin\\logs\\params.txt",par_str);
+        }
+        public static void logtext(string str)
+        {
+            using (System.IO.StreamWriter file =
+            new System.IO.StreamWriter(@"C:\\Users\\deepak.nailwal\\Desktop\\TestXML\\log.txt", true))
+            {
+                file.WriteLine(str);
+            }
+        }
+        public static void CreateReport()
+        {
+            /*XmlDocument doc = new XmlDocument();
+
+            //(1) the xml declaration is recommended, but not mandatory
+            XmlDeclaration xmlDeclaration = doc.CreateXmlDeclaration("1.0", "UTF-8", null);
+            XmlElement root = doc.DocumentElement;
+            doc.InsertBefore(xmlDeclaration, root);
+            logtext("Created Root node");
+            //doc.Save("F:\\Logi Apps\\TestPlugin\\logs\\root.xml");
+
+            //(2) string.Empty makes cleaner code
+            XmlElement element1 = doc.CreateElement(string.Empty, "Report", string.Empty);
+            doc.AppendChild(element1);
+            logtext("Created Element1");
+            doc.Save("C:\\Users\\deepak.nailwal\\Desktop\\TestXML\\ele1.xml");
+
+            XmlElement element2 = doc.CreateElement(string.Empty, "Body", string.Empty);
+            doc.AppendChild(element2);
+            logtext("Created Element2");
+            doc.Save("C:\\Users\\deepak.nailwal\\Desktop\\TestXML\\ele2.xml");
+
+            XmlElement element3 = doc.CreateElement(string.Empty, "Division", string.Empty);
+            element3.SetAttribute("ID", "divMain");
+            doc.AppendChild(element3);
+            logtext("Created Element3");
+            doc.Save("C:\\Users\\deepak.nailwal\\Desktop\\TestXML\\ele3.xml");
+
+            XmlElement element4 = doc.CreateElement(string.Empty, "Button", string.Empty);
+            element4.SetAttribute("ID", "btn1");
+            element4.SetAttribute("Caption", "Document Created");
+            doc.AppendChild(element4);
+            logtext("Created Element4");
+            doc.Save("C:\\Users\\deepak.nailwal\\Desktop\\TestXML\\ele4.xml");
+
+            doc.Save("C:\\Users\\deepak.nailwal\\Desktop\\TestXML\\newfile.lgx");
+            logtext("XML Created");
+            */
+            XDocument doc = new XDocument(new XElement("Report",
+                                           new XElement("Body",
+                                               new XElement("Division", new XAttribute("ID", "divMain")),
+                                               new XElement("Button", new XAttribute("ID", "btn1"), new XAttribute("Caption", "Document Created")))));
+            doc.Save("C:\\Users\\deepak.nailwal\\Desktop\\TestXML\\newfile.lgx");
+            Console.WriteLine("XML created sucessfully");
+            Console.ReadLine();
+            
+        }
+    }
+}
